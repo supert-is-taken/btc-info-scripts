@@ -8,6 +8,18 @@ test -z $(which geoiplookup) && echo "$(basename $0) requires geiop-bin to be in
 test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
 test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
 
+# test for options
+HTML=
+while getopts hwn: opt
+do
+    case "$opt" in
+    (h) echo "usage: $0 [-w]";;
+    (w) HTML=1;;
+    esac
+done
+
+shift $((OPTIND - 1))
+
 RANDFILE=/tmp/$RANDOM.tmp
 bitcoin-cli getpeerinfo > $RANDFILE
 
@@ -15,6 +27,8 @@ GEOFILE=/tmp/$RANDOM.tmp
 CLIENTS=/tmp/$RANDOM.tmp
 STARTINGHEIGHT=/tmp/$RANDOM.tmp
 SYNCED_BLOCKS=/tmp/$RANDOM.tmp
+TABLE=/tmp/$RANDOM.tmp
+OUTFILE=/tmp/$RANDOM.tmp
 
 IPS=$(grep 'addr":' $RANDFILE | grep -oE '([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)')
 for IP in $IPS
@@ -33,14 +47,30 @@ nl <(grep 'startingheight' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,/
     echo "#%client%ver%location%startingheight%synced_blocks"; \
     echo "-%------%---%--------%--------------%-------------"; \
     join <( join $CLIENTS <( join <(nl $GEOFILE) $STARTINGHEIGHT ) ) $SYNCED_BLOCKS; \
-) | column -t -s'%'
+) > $TABLE
+cat $TABLE | column -t -s'%' > $OUTFILE
 
-echo
-echo "local block count: " $(bitcoin-cli getblockcount)
-echo "tx in mempool: " $(bitcoin-cli getmempoolinfo | jq '.size') ", " $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb"
 
+if [ -z $HTML ]
+then
+    cat $OUTFILE
+    echo
+    echo "local block count: " $(bitcoin-cli getblockcount)
+    echo "tx in mempool: " $(bitcoin-cli getmempoolinfo | jq '.size') ", usage:" $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb, size:" $(($(bitcoin-cli getmempoolinfo | jq '.bytes') /1024/1024)) " Mb"
+else
+    cat $TABLE | awk 'BEGIN{print "<table>"; FS = "%" } {print "<tr>";for(i=1;i<=NF;i++)print "<td>" $i"</td>";print "</tr>"} END{print "</table>"}'
+    echo
+    echo "<table>"
+    echo "<td>local block count</td><td>" $(bitcoin-cli getblockcount) "</td>"
+    echo "<tr><td>tx in mempool</td><td>" $(bitcoin-cli getmempoolinfo | jq '.size') "</td></tr><tr><td>usage</td><td>" $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) "Mb</td></tr><tr><td>size<td>" $(($(bitcoin-cli getmempoolinfo | jq '.bytes') /1024/1024)) " Mb</td></tr>"
+    echo "</table>"
+fi
+
+
+rm $TABLE
 rm $GEOFILE
 rm $CLIENTS
 rm $SYNCED_BLOCKS
 rm $STARTINGHEIGHT
 rm $RANDFILE
+

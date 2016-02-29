@@ -1,6 +1,8 @@
 Example usage and output
 ========================
 
+Adding the switch '-w' will provide an html table to stdout instead.
+
     $ peerinfo
 
     #    client            ver                       location             startingheight  synced_blocks
@@ -12,27 +14,13 @@ Example usage and output
     5    BitcoinUnlimited  0.12.0(EB16; AD4)         Sweden               400362          400526
     6    BitcoinUnlimited  0.12.0(EB16; AD4)         Germany              400396          400531
     7    Classic           0.11.2                    China                400396          -1
-    8    BitcoinUnlimited  0.11.2                    Germany              400398          400531
-    9    Satoshi           0.11.0                    United States        400398          400531
-    10   Satoshi           0.9.99                    Germany              -1              -1
-    11   Satoshi           0.11.1                    United States        400406          400531
-    12   Satoshi           0.11.2                    France               400408          400531
-    13   BitcoinUnlimited  0.11.2                    Norway               400422          400531
-    14   BitcoinUnlimited  0.11.2                    Romania              400422          400531
-    15   BitcoinUnlimited  0.11.2                    Sweden               400426          400531
-    16   bitcoinj          0.12.2                    Germany              400429          -1
-    17   Satoshi           0.11.2                    United States        400445          400531
-    18   bitcoinj          0.13.3/MultiBitHD:0.2.0   Taiwan               400452          -1
-    19   Satoshi           0.12.0                    Singapore            400453          400531
-    20   Satoshi           0.12.0                    Germany              400502          400531
-    21   Satoshi           0.11.1                    Russian Federation   400454          400519
-    22   Satoshi           0.12.0                    Venezuela            183278          -1
+    [....]
 
     local block count:  400531
     tx in mempool:  486  Mb
 
 
-    $ recentblocks 10
+    $ recentblocks -n 10
 
     height  size   # tx  time      date
     ------  ----   ----  ----      ----
@@ -48,3 +36,9 @@ Example usage and output
     400522  958kb  1322  07:47:22  2016-02-29
 
     tx in mempool:  486  Mb
+
+
+## dependencies
+
+Requires (debian packages) jq, geoip-bin and also bitcoin-cli with a running bitcoind.
+

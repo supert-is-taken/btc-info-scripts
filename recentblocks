@@ -8,10 +8,22 @@ DATEFMT="+%H:%M:%S%%%Y-%m-%d"
 test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
 test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
 
-# argument is number of blocks to show, default 10
-NUMBLOCKS=${1-10}
+# test for options
+HTML=
+while getopts hwn: opt
+do
+    case "$opt" in
+    (h) echo "usage: $0 [-w] [-n NUMBLOCKS]";;
+    (w) HTML=1;;
+    # n argument is number of blocks to show, default 10
+    (n) NUMBLOCKS=${OPTARG-10};;
+    esac
+done
+
+shift $((OPTIND - 1))
 
 TABLE=/tmp/$RANDOM.tmp
+OUTFILE=/tmp/$RANDOM.tmp
 
 LASTHASH=$(bitcoin-cli getbestblockhash)
 
@@ -30,12 +42,24 @@ done
 # join results and present as a table
 # % is column separator
 (\
-    echo "height%size%# tx%time%date"; \
+    echo "height%size%#_tx%time%date"; \
     echo "------%----%----%----%----";\
     cat $TABLE \
-) | column -t -s'%'
+) | column -t -s'%' > $OUTFILE
 
-echo
-echo "tx in mempool: " $(bitcoin-cli getmempoolinfo | jq '.size') ", " $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb"
+
+if [ -z $HTML ]
+then
+    echo >> $OUTFILE
+    echo "tx in mempool: " $(bitcoin-cli getmempoolinfo | jq '.size') ", usage:" $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb, size:" $(($(bitcoin-cli getmempoolinfo | jq '.bytes') /1024/1024)) " Mb" >> $OUTFILE
+    cat $OUTFILE
+else
+    cat $OUTFILE | awk 'BEGIN{print "<table>"} {print "<tr>";for(i=1;i<=NF;i++)print "<td>" $i"</td>";print "</tr>"} END{print "</table>"}'
+    echo
+    echo "<table>"
+    echo "<tr><td>tx in mempool</td><td>" $(bitcoin-cli getmempoolinfo | jq '.size') "</td></tr><tr><td>usage</td><td>" $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) "Mb</td></tr><tr><td>size<td>" $(($(bitcoin-cli getmempoolinfo | jq '.bytes') /1024/1024)) " Mb</td></tr>"
+    echo "</table>"
+fi
 
 rm $TABLE
+rm $OUTFILE
