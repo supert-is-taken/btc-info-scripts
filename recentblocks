@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+# (c) /u/supert 2016
+
+DATEFMT="+%H:%M:%S%%%Y-%m-%d" 
+
+# requires various packages to be installed
+test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
+test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
+
+# argument is number of blocks to show, default 10
+NUMBLOCKS=${1-10}
+
+TABLE=/tmp/$RANDOM.tmp
+
+LASTHASH=$(bitcoin-cli getbestblockhash)
+
+# starting from last block, work back
+for (( i=1; i<=$NUMBLOCKS; i++ ))
+do
+    HEIGHT=$(bitcoin-cli getblock $LASTHASH | jq '.height')
+    SIZE="$(( $(bitcoin-cli getblock $LASTHASH | jq '.size')/1024 ))kb"
+    TXCOUNT=$(( $(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l) - 2 ))
+    TIME=$(bitcoin-cli getblock $LASTHASH | jq '.time')
+    TIME=$(date --date="@$TIME" $DATEFMT -u)
+    echo "$HEIGHT%$SIZE%$TXCOUNT%$TIME" >> $TABLE
+    LASTHASH=$(bitcoin-cli getblock $LASTHASH | jq -r '.previousblockhash')
+done
+
+# join results and present as a table
+# % is column separator
+(\
+    echo "height%size%# tx%time%date"; \
+    echo "------%----%----%----%----";\
+    cat $TABLE \
+) | column -t -s'%'
+
+echo
+echo "tx in mempool: " $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb"
+
+rm $TABLE

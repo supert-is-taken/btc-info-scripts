@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# (c) /u/supert 2016
+# release under MIT licence
+
+# requires geoip-bin package to be installed
+test -z $(which geoiplookup) && echo "$(basename $0) requires geiop-bin to be installed."
+test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
+test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
+
+RANDFILE=/tmp/$RANDOM.tmp
+bitcoin-cli getpeerinfo > $RANDFILE
+
+GEOFILE=/tmp/$RANDOM.tmp
+CLIENTS=/tmp/$RANDOM.tmp
+STARTINGHEIGHT=/tmp/$RANDOM.tmp
+SYNCED_BLOCKS=/tmp/$RANDOM.tmp
+
+IPS=$(grep 'addr":' $RANDFILE | grep -oE '([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)')
+for IP in $IPS
+do
+    geoiplookup $IP | sed -e 's/.*, /%/' >> $GEOFILE
+done
+
+# get relevant bits of json reply
+nl <(grep 'subver' $RANDFILE | sed -e 's/ *//' -e 's/.*: \"\//%/' -e 's/\/\"//' -e 's/,//' -e 's/:/%/') > $CLIENTS
+nl <(grep 'synced_blocks' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,//') > $SYNCED_BLOCKS
+nl <(grep 'startingheight' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,//') > $STARTINGHEIGHT
+
+# join results and present as a table
+# % is column separator
+(\
+    echo "#%client%ver%location%startingheight%synced_blocks"; \
+    echo "-%------%---%--------%--------------%-------------"; \
+    join <( join $CLIENTS <( join <(nl $GEOFILE) $STARTINGHEIGHT ) ) $SYNCED_BLOCKS; \
+) | column -t -s'%'
+
+echo
+echo "local block count: " $(bitcoin-cli getblockcount)
+echo "tx in mempool: " $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb"
+
+rm $GEOFILE
+rm $CLIENTS
+rm $SYNCED_BLOCKS
+rm $STARTINGHEIGHT
+rm $RANDFILE
