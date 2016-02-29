@@ -22,8 +22,8 @@ done
 
 shift $((OPTIND - 1))
 
-TABLE=/tmp/$RANDOM.tmp
-OUTFILE=/tmp/$RANDOM.tmp
+TABLE=/tmp/recentblocks-$RANDOM.tmp
+OUTFILE=/tmp/recentblocks-$RANDOM.tmp
 
 LASTHASH=$(bitcoin-cli getbestblockhash)
 

@@ -20,15 +20,15 @@ done
 
 shift $((OPTIND - 1))
 
-RANDFILE=/tmp/$RANDOM.tmp
+RANDFILE=/tmp/peerinfo-$RANDOM.tmp
 bitcoin-cli getpeerinfo > $RANDFILE
 
-GEOFILE=/tmp/$RANDOM.tmp
-CLIENTS=/tmp/$RANDOM.tmp
-STARTINGHEIGHT=/tmp/$RANDOM.tmp
-SYNCED_BLOCKS=/tmp/$RANDOM.tmp
-TABLE=/tmp/$RANDOM.tmp
-OUTFILE=/tmp/$RANDOM.tmp
+GEOFILE=/tmp/peerinfo-$RANDOM.tmp
+CLIENTS=/tmp/peerinfo-$RANDOM.tmp
+STARTINGHEIGHT=/tmp/peerinfo-$RANDOM.tmp
+SYNCED_BLOCKS=/tmp/peerinfo-$RANDOM.tmp
+TABLE=/tmp/peerinfo-$RANDOM.tmp
+OUTFILE=/tmp/peerinfo-$RANDOM.tmp
 
 IPS=$(grep 'addr":' $RANDFILE | grep -oE '([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)')
 for IP in $IPS
