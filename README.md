@@ -3,7 +3,7 @@ Example usage and output
 
 Adding the switch '-w' will provide an html table to stdout instead.
 
-    $ peerinfo
+    $ watch -n 10 peerinfo
 
     #    client            ver                       location             startingheight  synced_blocks
     -    ------            ---                       --------             --------------  -------------
@@ -20,7 +20,7 @@ Adding the switch '-w' will provide an html table to stdout instead.
     tx in mempool:  486  Mb
 
 
-    $ recentblocks -n 10
+    $ watch -n 120 recentblocks -n 10
 
     height  size   # tx  time      date
     ------  ----   ----  ----      ----
