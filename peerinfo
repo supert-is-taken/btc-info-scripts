@@ -37,7 +37,7 @@ nl <(grep 'startingheight' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,/
 
 echo
 echo "local block count: " $(bitcoin-cli getblockcount)
-echo "tx in mempool: " $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb"
+echo "tx in mempool: " $(bitcoin-cli getmempoolinfo | jq '.size') ", " $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb"
 
 rm $GEOFILE
 rm $CLIENTS

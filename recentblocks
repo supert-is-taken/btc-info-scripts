@@ -36,6 +36,6 @@ done
 ) | column -t -s'%'
 
 echo
-echo "tx in mempool: " $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb"
+echo "tx in mempool: " $(bitcoin-cli getmempoolinfo | jq '.size') ", " $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb"
 
 rm $TABLE
