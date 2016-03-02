@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+# (c) /u/supert 2016
+# release under MIT licence
+
+test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
+test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
+test -z $(which bc) && echo "$(basename $0) requires bc to be installed."
+
+# test for options
+HTML=
+while getopts hwn: opt
+do
+    case "$opt" in
+    (h) echo "usage: $0 [-w] [-n NUMBLOCKS]";;
+    (w) HTML=1;;
+    # n argument is number of blocks to show, default 10
+    (n) NUMBLOCKS=${OPTARG-5};;
+    esac
+done
+
+# fees in mempool
+FEETOTAL=$(bitcoin-cli getrawmempool true | jq -r '.[]|.fee' | awk '{s+=$1} END {printf "%.0f", s}' ) 
+
+BTCUSD=$(curl -s "https://api.bitcoinaverage.com/ticker/USD/last")
+
+echo "Fees in mempool: $FEETOTAL BTC, $(echo $FEETOTAL*$BTCUSD | bc) USD"
+ESTIMATE=$(bitcoin-cli estimatefee 2)
+
+# fee estimates
+echo "estimated fee for inclusion in 2 blocks: $ESTIMATE BTC, $(echo $ESTIMATE*$BTCUSD | bc) USD, BTCUSD=\$$BTCUSD"
+
+exit
+
+# total reward per block
+# average fee per block
+# just look at coinbase transaction; surplus over coinbase is the fee total
+# requires txindex=1 in bitcoin.conf
+TABLE=/tmp/feestate-$RANDOM.tmp
+FEES=/tmp/feestate-$RANDOM.tmp
+# starting from last block, work back
+LASTHASH=$(bitcoin-cli getbestblockhash)
+
+for i in $(seq $NUMBLOCKS)
+do
+    HEIGHT=$(bitcoin-cli getblock $LASTHASH | jq '.height')
+    SIZE="$(( $(bitcoin-cli getblock $LASTHASH | jq '.size')/1024 ))kb"
+    TXCOUNT=$(( $(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l) - 2 ))
+    TXS=$(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[]')
+    rm $FEES
+    for TX in TXS
+    do
+        gettxfee $TX
+    done
+    echo "$HEIGHT%$SIZE%$TXCOUNT%$FEES" >> $TABLE
+    LASTHASH=$(bitcoin-cli getblock $LASTHASH | jq -r '.previousblockhash')
+done
+
+rm $TABLE
