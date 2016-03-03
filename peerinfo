@@ -3,6 +3,8 @@
 # (c) /u/supert 2016
 # release under MIT licence
 
+# show info about connected peers
+
 # requires geoip-bin package to be installed
 test -z $(which geoiplookup) && echo "$(basename $0) requires geiop-bin to be installed."
 test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
@@ -23,12 +25,12 @@ shift $((OPTIND - 1))
 RANDFILE=/tmp/peerinfo-$RANDOM.tmp
 bitcoin-cli getpeerinfo > $RANDFILE
 
-GEOFILE=/tmp/peerinfo-$RANDOM.tmp
-CLIENTS=/tmp/peerinfo-$RANDOM.tmp
-STARTINGHEIGHT=/tmp/peerinfo-$RANDOM.tmp
-SYNCED_BLOCKS=/tmp/peerinfo-$RANDOM.tmp
-TABLE=/tmp/peerinfo-$RANDOM.tmp
-OUTFILE=/tmp/peerinfo-$RANDOM.tmp
+GEOFILE=/tmp/peerinfo-geofile-$RANDOM.tmp
+CLIENTS=/tmp/peerinfo-clients-$RANDOM.tmp
+STARTINGHEIGHT=/tmp/peerinfo-startingheight-$RANDOM.tmp
+SYNCED_BLOCKS=/tmp/peerinfo-synced-$RANDOM.tmp
+TABLE=/tmp/peerinfo-table-$RANDOM.tmp
+OUTFILE=/tmp/peerinfo-out-$RANDOM.tmp
 
 IPS=$(grep 'addr":' $RANDFILE | grep -oE '([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)')
 for IP in $IPS
@@ -56,21 +58,19 @@ then
     cat $OUTFILE
     echo
     echo "local block count: " $(bitcoin-cli getblockcount)
-    echo "tx in mempool: " $(bitcoin-cli getmempoolinfo | jq '.size') ", usage:" $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb, size:" $(($(bitcoin-cli getmempoolinfo | jq '.bytes') /1024/1024)) " Mb"
 else
     cat $TABLE | awk 'BEGIN{print "<table>"; FS = "%" } {print "<tr>";for(i=1;i<=NF;i++)print "<td>" $i"</td>";print "</tr>"} END{print "</table>"}'
     echo
     echo "<table>"
     echo "<td>local block count</td><td>" $(bitcoin-cli getblockcount) "</td>"
-    echo "<tr><td>tx in mempool</td><td>" $(bitcoin-cli getmempoolinfo | jq '.size') "</td></tr><tr><td>usage</td><td>" $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) "Mb</td></tr><tr><td>size<td>" $(($(bitcoin-cli getmempoolinfo | jq '.bytes') /1024/1024)) " Mb</td></tr>"
     echo "</table>"
 fi
 
-
-rm $TABLE
+rm $RANDFILE
 rm $GEOFILE
 rm $CLIENTS
-rm $SYNCED_BLOCKS
 rm $STARTINGHEIGHT
-rm $RANDFILE
+rm $SYNCED_BLOCKS
+rm $TABLE
+rm $OUTFILE
 

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
-# calculate fee for a transaction
-# loop over arguments
+# calculate fee for transactions
+# returns json
+
+test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
+test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
 
 function sum {
     echo "$@" | sed -e's/ /+/' | bc

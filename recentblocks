@@ -1,48 +1,52 @@
 #!/usr/bin/env bash
 
 # (c) /u/supert 2016
+# released under MIT licence
+
+# show info about recent blocks
 
 DATEFMT="+%H:%M:%S%%%Y-%m-%d" 
 
-# requires various packages to be installed
 test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
 test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
 
 # test for options
 HTML=
+NUMBLOCKS=10
 while getopts hwn: opt
 do
     case "$opt" in
     (h) echo "usage: $0 [-w] [-n NUMBLOCKS]";;
     (w) HTML=1;;
     # n argument is number of blocks to show, default 10
-    (n) NUMBLOCKS=${OPTARG-10};;
+    (n) NUMBLOCKS=$OPTARG;;
     esac
 done
 
 shift $((OPTIND - 1))
 
-TABLE=/tmp/recentblocks-$RANDOM.tmp
-OUTFILE=/tmp/recentblocks-$RANDOM.tmp
+TABLE=/tmp/recentblocks-table-$RANDOM.tmp
+OUTFILE=/tmp/recentblocks-out-$RANDOM.tmp
 
 LASTHASH=$(bitcoin-cli getbestblockhash)
 
 # starting from last block, work back
-for (( i=1; i<=$NUMBLOCKS; i++ ))
+for i in $(seq $NUMBLOCKS)
 do
     HEIGHT=$(bitcoin-cli getblock $LASTHASH | jq '.height')
     SIZE="$(( $(bitcoin-cli getblock $LASTHASH | jq '.size')/1024 ))kb"
-    TXCOUNT=$(( $(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l) - 2 ))
+    TXCOUNT=$(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l)
+    COINBASE=$(gettxfee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[]' | head -n1) | jq '.value' )
     TIME=$(bitcoin-cli getblock $LASTHASH | jq '.time')
     TIME=$(date --date="@$TIME" $DATEFMT -u)
-    echo "$HEIGHT%$SIZE%$TXCOUNT%$TIME" >> $TABLE
+    echo "$HEIGHT%$SIZE%$TXCOUNT%$COINBASE%$TIME" >> $TABLE
     LASTHASH=$(bitcoin-cli getblock $LASTHASH | jq -r '.previousblockhash')
 done
 
 # join results and present as a table
 # % is column separator
 (\
-    echo "height%size%#_tx%time%date"; \
+    echo "height%size%#_tx%coinbase%time%date"; \
     echo "------%----%----%----%----";\
     cat $TABLE \
 ) | column -t -s'%' > $OUTFILE
@@ -50,15 +54,9 @@ done
 
 if [ -z $HTML ]
 then
-    echo >> $OUTFILE
-    echo "tx in mempool: " $(bitcoin-cli getmempoolinfo | jq '.size') ", usage:" $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb, size:" $(($(bitcoin-cli getmempoolinfo | jq '.bytes') /1024/1024)) " Mb" >> $OUTFILE
     cat $OUTFILE
 else
     cat $OUTFILE | awk 'BEGIN{print "<table>"} {print "<tr>";for(i=1;i<=NF;i++)print "<td>" $i"</td>";print "</tr>"} END{print "</table>"}'
-    echo
-    echo "<table>"
-    echo "<tr><td>tx in mempool</td><td>" $(bitcoin-cli getmempoolinfo | jq '.size') "</td></tr><tr><td>usage</td><td>" $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) "Mb</td></tr><tr><td>size<td>" $(($(bitcoin-cli getmempoolinfo | jq '.bytes') /1024/1024)) " Mb</td></tr>"
-    echo "</table>"
 fi
 
 rm $TABLE
