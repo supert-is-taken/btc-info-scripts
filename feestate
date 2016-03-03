@@ -21,15 +21,22 @@ do
     esac
 done
 
+# market price
+BTCUSD=$(curl -s "https://api.bitcoinaverage.com/ticker/USD/last")
+echo "1 BTC = $BTCUSD USD"
+
 # fees in mempool
 FEETOTAL=$(bitcoin-cli getrawmempool true | jq -r '.[]|.fee' | awk '{s+=$1} END {print s}' ) 
-
-BTCUSD=$(curl -s "https://api.bitcoinaverage.com/ticker/USD/last")
-
-echo "Fees in mempool: $FEETOTAL BTC, $(echo $FEETOTAL*$BTCUSD | bc) USD"
-ESTIMATE=$(bitcoin-cli estimatefee 2)
+FEES=$(printf "%.2f" $(echo $FEETOTAL*$BTCUSD | bc))
+echo "Fees in mempool: $FEETOTAL BTC, $FEES USD"
 
 # fee estimates
-echo "estimated fee for inclusion in 2 blocks: $ESTIMATE BTC, $(echo $ESTIMATE*$BTCUSD | bc) USD, BTCUSD=\$$BTCUSD"
+echo "estimated fee for inclusion in..."
+for i in $(seq 2 8)
+do
+    ESTIMATE=$(bitcoin-cli estimatefee $i)
+    FEE=$(printf "%02.2f" $(echo $ESTIMATE*$BTCUSD | bc))
+    echo -e "\t$i blocks: $ESTIMATE BTC, $FEE USD"
+done
 
 echo "tx in mempool: " $(bitcoin-cli getmempoolinfo | jq '.size') ", usage:" $(($(bitcoin-cli getmempoolinfo | jq '.usage') /1024/1024)) " Mb, size:" $(($(bitcoin-cli getmempoolinfo | jq '.bytes') /1024/1024)) " Mb"
