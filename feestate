@@ -30,9 +30,11 @@ FEETOTAL=$(bitcoin-cli getrawmempool true | jq -r '.[]|.fee' | awk '{s+=$1} END 
 FEES=$(printf "%.2f" $(echo $FEETOTAL*$BTCUSD | bc))
 echo "Fees in mempool: $FEETOTAL BTC, $FEES USD"
 
+RELAYFEE=$(printf "%.8f" $(bitcoin-cli getinfo | jq -r '.relayfee'))
+echo "Relay fee:" $RELAYFEE "BTC," $(printf "%.3f" $(echo $RELAYFEE*$BTCUSD | bc)) "USD"
 # fee estimates
 echo "estimated fee for inclusion in..."
-for i in $(seq 2 8)
+for i in $(seq 1 8)
 do
     ESTIMATE=$(bitcoin-cli estimatefee $i)
     FEE=$(printf "%02.2f" $(echo $ESTIMATE*$BTCUSD | bc))

@@ -34,20 +34,21 @@ LASTHASH=$(bitcoin-cli getbestblockhash)
 for i in $(seq $NUMBLOCKS)
 do
     HEIGHT=$(bitcoin-cli getblock $LASTHASH | jq '.height')
+    VERSION=x$(printf "%08x" $(bitcoin-cli getblock $LASTHASH | jq '.version'))
     SIZE="$(( $(bitcoin-cli getblock $LASTHASH | jq '.size')/1024 ))kb"
     TXCOUNT=$(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l)
     COINBASE=$(gettxfee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[]' | head -n1) | jq '.value' )
     TIME=$(bitcoin-cli getblock $LASTHASH | jq '.time')
     TIME=$(date --date="@$TIME" $DATEFMT -u)
-    echo "$HEIGHT%$SIZE%$TXCOUNT%$COINBASE%$TIME" >> $TABLE
+    echo "$HEIGHT%$SIZE%$TXCOUNT%$COINBASE%$VERSION%$TIME" >> $TABLE
     LASTHASH=$(bitcoin-cli getblock $LASTHASH | jq -r '.previousblockhash')
 done
 
 # join results and present as a table
 # % is column separator
 (\
-    echo "height%size%#_tx%coinbase%time%date"; \
-    echo "------%----%----%----%----";\
+    echo "height%size%#_tx%coinbase%version%time%date"; \
+    echo "------%----%----%--------%-------%----%----";\
     cat $TABLE \
 ) | column -t -s'%' > $OUTFILE
 
