@@ -35,20 +35,22 @@ OUTFILE=/tmp/peerinfo-out-$RANDOM.tmp
 IPS=$(grep 'addr":' $RANDFILE | grep -oE '([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)')
 for IP in $IPS
 do
-    geoiplookup $IP | sed -e 's/.*, /%/' >> $GEOFILE
+    HOST=$(geoiplookup $IP | sed -e 's/.*, /%/')
+    HOST=$HOST'%'$(host $IP | sed -e 's/.* //')'%'
+    echo $HOST >> $GEOFILE
 done
 
 # get relevant bits of json reply
-nl <(grep 'subver' $RANDFILE | sed -e 's/ *//' -e 's/.*: \"\//%/' -e 's/\/\"//' -e 's/,//' -e 's/:/%/') > $CLIENTS
+nl <(grep 'subver' $RANDFILE | sed -e 's/ *//' -e 's/.*: \"\//%/' -e 's/\/\"//' -e 's/,//' -e 's/:/%/' ) > $CLIENTS
 nl <(grep 'synced_blocks' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,//') > $SYNCED_BLOCKS
 nl <(grep 'startingheight' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,//') > $STARTINGHEIGHT
 
 # join results and present as a table
 # % is column separator
 (\
-    echo "#%client%ver%location%startingheight%synced_blocks"; \
+    echo "#%client%ver%%startingheight%synced_blocks%location%address"; \
     echo "-%------%---%--------%--------------%-------------"; \
-    join <( join $CLIENTS <( join <(nl $GEOFILE) $STARTINGHEIGHT ) ) $SYNCED_BLOCKS; \
+    join <( join $CLIENTS <( join $SYNCED_BLOCKS $STARTINGHEIGHT ) ) <(nl $GEOFILE); \
 ) > $TABLE
 cat $TABLE | column -t -s'%' > $OUTFILE
 
