@@ -5,10 +5,12 @@
 
 # show info about recent blocks
 
+BLOCKREWARD=25
 DATEFMT="+%H:%M:%S%%%Y-%m-%d" 
 
 test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
 test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
+test -z $(which bc) && echo "$(basename $0) requires bc to be installed."
 
 # test for options
 HTML=
@@ -38,17 +40,18 @@ do
     SIZE="$(( $(bitcoin-cli getblock $LASTHASH | jq '.size')/1024 ))kb"
     TXCOUNT=$(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l)
     COINBASE=$(gettxfee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[]' | head -n1) | jq '.value' )
+    AVE_FEE=$(printf "%.8f" $(echo "($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l))
     TIME=$(bitcoin-cli getblock $LASTHASH | jq '.time')
     TIME=$(date --date="@$TIME" $DATEFMT -u)
-    echo "$HEIGHT%$SIZE%$TXCOUNT%$COINBASE%$VERSION%$TIME" >> $TABLE
+    echo "$HEIGHT%$SIZE%$TXCOUNT%$COINBASE%$AVE_FEE%$VERSION%$TIME" >> $TABLE
     LASTHASH=$(bitcoin-cli getblock $LASTHASH | jq -r '.previousblockhash')
 done
 
 # join results and present as a table
 # % is column separator
 (\
-    echo "height%size%#_tx%coinbase%version%time%date"; \
-    echo "------%----%----%--------%-------%----%----";\
+    echo "height%size%#_tx%coinbase%fees/tx%version%time%date"; \
+    echo "------%----%----%--------%-------%-------%----%----";\
     cat $TABLE \
 ) | column -t -s'%' > $OUTFILE
 
