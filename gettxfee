@@ -5,6 +5,7 @@
 
 test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
 test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
+test -z $(which xxd) && echo "$(basename $0) requires xxd to be installed."
 
 function sum {
     echo "$@" | sed -e's/ /+/' | bc
@@ -36,7 +37,14 @@ function get_fee {
     echo "$INPUT_VAL-$OUTPUT_VAL" | bc
 }
     
-function coinbase {
+function coinbase_str {
+    # return coinbase or 0 otherwise
+    RAWTX=$(bitcoin-cli getrawtransaction $1 1)
+    echo "$(echo $RAWTX | jq -r '.vin | .[] | .coinbase')"
+    #echo "$(echo $RAWTX | jq -r '.vin | .[] | .coinbase' | xxd -r -p | sed -e 's/"/\\"/g')"
+}
+
+function is_coinbase {
     # return coinbase or 0 otherwise
     RAWTX=$(bitcoin-cli getrawtransaction $1 1)
     echo $RAWTX | jq -r '.vin | .[] | .coinbase // false'
@@ -44,18 +52,19 @@ function coinbase {
 
 for TXID in "$@"
 do
-    if [ $(coinbase $TXID) = 'false' ]
+    if [ $(is_coinbase $TXID) = 'false' ]
     then
         echo '{'
         echo '"txid": "'$TXID'",'
-        echo '"coinbase": 0,'
+        echo '"is_coinbase": 0,'
         echo '"fee":' $(get_fee $TXID)','
         echo '"value":' $(sum $(get_tx_output_values $TXID))
         echo '}'
     else
         echo '{'
         echo '"txid": "'$TXID'",'
-        echo '"coinbase": 1,'
+        echo '"is_coinbase": 1,'
+        echo '"coinbase": "'$(coinbase_str $TXID)"\","
         echo '"value":' $(sum $(get_tx_output_values $TXID))
         echo '}'
     fi

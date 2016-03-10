@@ -41,7 +41,7 @@ do
 done
 
 # get relevant bits of json reply
-nl <(grep 'subver' $RANDFILE | sed -e 's/ *//' -e 's/.*: \"\//%/' -e 's/\/\"//' -e 's/,//' -e 's/:/%/' ) > $CLIENTS
+nl <(grep 'subver' $RANDFILE | sed -e 's/ *//' -e 's/.*: \"\//%/' -e 's/\/\"//' -e 's/,//' -e 's/:/%/' | cut -c 1-20 ) > $CLIENTS
 nl <(grep 'synced_blocks' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,//') > $SYNCED_BLOCKS
 nl <(grep 'startingheight' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,//') > $STARTINGHEIGHT
 
@@ -57,7 +57,7 @@ cat $TABLE | column -t -s'%' > $OUTFILE
 
 if [ -z $HTML ]
 then
-    cat $OUTFILE
+    cat $OUTFILE | cut -c 1-$(tput cols)
     echo
     echo "local block count: " $(bitcoin-cli getblockcount)
 else

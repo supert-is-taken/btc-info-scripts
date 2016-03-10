@@ -32,6 +32,46 @@ OUTFILE=/tmp/recentblocks-out-$RANDOM.tmp
 
 LASTHASH=$(bitcoin-cli getbestblockhash)
 
+function miner {
+    # determine miner from coinbase string
+    CB="$(echo "$@" | xxd -r -p)"
+    MINER=
+    [[ "$CB" =~ '7七彩神仙鱼' ]] && MINER="$MINER""7七彩神仙鱼/f2pool "
+    [[ "$CB" =~ 'AntPool' ]] && MINER="$MINER""AntPool "
+    [[ "$CB" =~ 'BitFury' ]] && MINER="$MINER""BitFury "
+    [[ "$CB" =~ 'BW Pool' ]] && MINER="$MINER""BW "
+    [[ "$CB" =~ 'fisher' ]] && MINER="$MINER""fisher "
+    [[ "$CB" =~ 'jinxin' ]] && MINER="$MINER""jinxin "
+    [[ "$CB" =~ 'chuan' ]] && MINER="$MINER""chuan "
+    [[ "$CB" =~ 'rasgbonyo' ]] && MINER="$MINER""rasgbonyo "
+    [[ "$CB" =~ 'ligengyin' ]] && MINER="$MINER""ligengyin "
+    [[ "$CB" =~ 'BTCC' ]] && MINER="$MINER""BTCC "
+    [[ "$CB" =~ 'BitMinter' ]] && MINER="$MINER""BitMinter "
+    [[ "$CB" =~ 'wyb5218' ]] && MINER="$MINER""wyb5218 "
+    [[ "$CB" =~ 'slush' ]] && MINER="$MINER""slush "
+    [[ "$CB" =~ 'ckpool' ]] && MINER="$MINER""ckpool "
+    [[ "$CB" =~ 'by260150' ]] && MINER="$MINER""by260150 "
+    [[ "$CB" =~ 'gaoyuebin' ]] && MINER="$MINER""gaoyuebin "
+    [[ "$CB" =~ 'f2pool' ]] && MINER="$MINER""f2pool "
+    [[ "$CB" =~ 'ninglei' ]] && MINER="$MINER""ninglei "
+    [[ "$CB" =~ 'haobtc' ]] && MINER="$MINER""haobtc "
+    [[ "$CB" =~ 'BitClub' ]] && MINER="$MINER""BitClub "
+    [[ "$CB" =~ 'lcq19890718' ]] && MINER="$MINER""lcq19890718 "
+    [[ "$CB" =~ 'anshaohua' ]] && MINER="$MINER""anshaohua "
+    [[ "$CB" =~ 'bcy' ]] && MINER="$MINER""bcy "
+    [[ "$CB" =~ 'KnCMiner' ]] && MINER="$MINER""KnCMiner "
+    [[ "$CB" =~ 'weixin' ]] && MINER="$MINER""weixin "
+    [[ "$CB" =~ 'handan' ]] && MINER="$MINER""handan "
+    [[ "$CB" =~ 'eileencwl' ]] && MINER="$MINER""eileencwl "
+    # determine support for BIPs etc
+    [[ "$CB" =~ 'BIP100' ]] && MINER="$MINER""BIP100 "
+    [[ "$CB" =~ 'BIP101' ]] && MINER="$MINER""BIP101 "
+    [[ "$CB" =~ 'BIP109' ]] && MINER="$MINER""BIP109 "
+    [[ "$CB" =~ '8M' ]] && MINER="$MINER""8MB "
+    [[ "$CB" =~ 'SEGWIT' ]] && MINER="$MINER""SEGWIT "
+    echo "$MINER"
+}
+
 # starting from last block, work back
 for i in $(seq $NUMBLOCKS)
 do
@@ -39,26 +79,27 @@ do
     VERSION=x$(printf "%08x" $(bitcoin-cli getblock $LASTHASH | jq '.version'))
     SIZE="$(( $(bitcoin-cli getblock $LASTHASH | jq '.size')/1024 ))kb"
     TXCOUNT=$(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l)
-    COINBASE=$(gettxfee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[]' | head -n1) | jq '.value' )
+    COINBASE=$(gettxfee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[0]') | grep -v 'coinbase' | jq '.value' )
+    COINBASE_STR=$(miner "$(gettxfee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[0]') | jq -r '.coinbase')")
     AVE_FEE=$(printf "%.8f" $(echo "($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l))
     TIME=$(bitcoin-cli getblock $LASTHASH | jq '.time')
     TIME=$(date --date="@$TIME" $DATEFMT -u)
-    echo "$HEIGHT%$SIZE%$TXCOUNT%$COINBASE%$AVE_FEE%$VERSION%$TIME" >> $TABLE
+    echo -e "$HEIGHT%$SIZE%$TXCOUNT%$COINBASE%$AVE_FEE%$VERSION%$TIME%$COINBASE_STR" >> $TABLE
     LASTHASH=$(bitcoin-cli getblock $LASTHASH | jq -r '.previousblockhash')
 done
 
 # join results and present as a table
 # % is column separator
 (\
-    echo "height%size%#_tx%coinbase%fees/tx%version%time%date"; \
-    echo "------%----%----%--------%-------%-------%----%----";\
+    echo "height%size%#_tx%coinbase%fees/tx%version%time%date%coinbase_str"; \
+    echo "------%----%----%--------%-------%-------%----%----%------------";\
     cat $TABLE \
 ) | column -t -s'%' > $OUTFILE
 
 
 if [ -z $HTML ]
 then
-    cat $OUTFILE
+    cat $OUTFILE | cut -c 1-$(tput cols)
 else
     cat $OUTFILE | awk 'BEGIN{print "<table>"} {print "<tr>";for(i=1;i<=NF;i++)print "<td>" $i"</td>";print "</tr>"} END{print "</table>"}'
 fi
