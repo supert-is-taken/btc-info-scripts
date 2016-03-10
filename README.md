@@ -2,10 +2,12 @@ Example usage and output
 ========================
 
 Adding the switch '-w' will provide an html table to stdout instead.
+Adding the switch '-r' will omit the formatting header.
+You will need to add all the scripts to your path. In particular, all the commands need to have in their path the file script_functions.
 
 ### connected peers
 
-    $ watch -n 10 peerinfo
+    $ watch -n 120 peerinfo
 
     #    client                ver       startingheight  synced_blocks   location          address
     -    ------                ---       --------        --------------  -------------     -------

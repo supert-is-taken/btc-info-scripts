@@ -1,58 +1,58 @@
 #!/usr/bin/env bash
 
 # (c) /u/supert 2016
-# release under MIT licence
+# MIT licence
 
 # show info about connected peers
 
-# requires geoip-bin package to be installed
-test -z $(which geoiplookup) && echo "$(basename $0) requires geiop-bin to be installed."
-test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
-test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
+source script_functions
 
 # test for options
 HTML=
-while getopts hwn: opt
+NOHEADER=
+while getopts hwr opt
 do
     case "$opt" in
-    (h) echo "usage: $0 [-w]";;
+    (h) echo "usage: $0 [-w] [-r]";;
     (w) HTML=1;;
+    (r) NOHEADER=1;;
     esac
 done
 
 shift $((OPTIND - 1))
 
 RANDFILE=/tmp/peerinfo-$RANDOM.tmp
-bitcoin-cli getpeerinfo > $RANDFILE
 
-GEOFILE=/tmp/peerinfo-geofile-$RANDOM.tmp
-CLIENTS=/tmp/peerinfo-clients-$RANDOM.tmp
+ADDRESS=/tmp/peerinfo-address-$RANDOM.tmp
+LOCATION=/tmp/peerinfo-location-$RANDOM.tmp
+HOSTNAME=/tmp/peerinfo-host-$RANDOM.tmp
+CLIENT=/tmp/peerinfo-client-$RANDOM.tmp
+SUBVER=/tmp/peerinfo-subver-$RANDOM.tmp
 STARTINGHEIGHT=/tmp/peerinfo-startingheight-$RANDOM.tmp
 SYNCED_BLOCKS=/tmp/peerinfo-synced-$RANDOM.tmp
 TABLE=/tmp/peerinfo-table-$RANDOM.tmp
 OUTFILE=/tmp/peerinfo-out-$RANDOM.tmp
 
-IPS=$(grep 'addr":' $RANDFILE | grep -oE '([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*)')
-for IP in $IPS
-do
-    HOST=$(geoiplookup $IP | sed -e 's/.*, /%/')
-    HOST=$HOST'%'$(host $IP | sed -e 's/.* //')'%'
-    echo $HOST >> $GEOFILE
-done
+bitcoin-cli getpeerinfo > $RANDFILE
 
-# get relevant bits of json reply
-nl <(grep 'subver' $RANDFILE | sed -e 's/ *//' -e 's/.*: \"\//%/' -e 's/\/\"//' -e 's/,//' -e 's/:/%/' | cut -c 1-20 ) > $CLIENTS
-nl <(grep 'synced_blocks' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,//') > $SYNCED_BLOCKS
-nl <(grep 'startingheight' $RANDFILE | sed -e 's/.*: /%/' -e 's/\/\"//' -e 's/,//') > $STARTINGHEIGHT
+get_field 'subver' "$RANDFILE" | sed -e 's+^.*:++' -e 's:/::' | cut -c 1-20 > $SUBVER
+get_field 'subver' "$RANDFILE" | sed -e 's+:.*$++' -e 's+/++' | cut -c 1-20 > $CLIENT
+get_field 'synced_blocks' "$RANDFILE" > $SYNCED_BLOCKS
+get_field 'startingheight' "$RANDFILE" > $STARTINGHEIGHT
+get_field 'addr' "$RANDFILE" | sed 's/:.*$//' > $ADDRESS
+get_location $ADDRESS > $LOCATION
+get_host $ADDRESS > $HOSTNAME
 
 # join results and present as a table
-# % is column separator
 (\
-    echo "#%client%ver%%startingheight%synced_blocks%location%address"; \
-    echo "-%------%---%--------%--------------%-------------"; \
-    join <( join $CLIENTS <( join $SYNCED_BLOCKS $STARTINGHEIGHT ) ) <(nl $GEOFILE); \
+    if [ -z $NOHEADER ]
+    then
+        echo "# client ver synced since location host";
+        echo "- ------ --- ------ ----- -------- ----";
+    fi; \
+    multi_join $CLIENT $SUBVER $SYNCED_BLOCKS $STARTINGHEIGHT $LOCATION $HOSTNAME ; \
 ) > $TABLE
-cat $TABLE | column -t -s'%' > $OUTFILE
+column -t $TABLE | sed -e 's/%/ /g' > $OUTFILE
 
 
 if [ -z $HTML ]
@@ -61,18 +61,12 @@ then
     echo
     echo "local block count: " $(bitcoin-cli getblockcount)
 else
-    cat $TABLE | awk 'BEGIN{print "<table>"; FS = "%" } {print "<tr>";for(i=1;i<=NF;i++)print "<td>" $i"</td>";print "</tr>"} END{print "</table>"}'
+    cat $TABLE | awk 'BEGIN{print "<table>"; FS = " " } {print "<tr>";for(i=1;i<=NF;i++)print "<td>" $i"</td>";print "</tr>"} END{print "</table>"}'
     echo
     echo "<table>"
     echo "<td>local block count</td><td>" $(bitcoin-cli getblockcount) "</td>"
     echo "</table>"
 fi
 
-rm $RANDFILE
-rm $GEOFILE
-rm $CLIENTS
-rm $STARTINGHEIGHT
-rm $SYNCED_BLOCKS
-rm $TABLE
-rm $OUTFILE
+rm $RANDFILE $ADDRESS $HOSTNAME $LOCATION $CLIENT $SUBVER $STARTINGHEIGHT $SYNCED_BLOCKS $TABLE $OUTFILE
 

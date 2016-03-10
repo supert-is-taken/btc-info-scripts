@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+
+# (c) /u/supert 2016
+# released under MIT licence
+
+# common functions for btc info scripts
+
+# requires geoip-bin package to be installed
+test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
+test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
+test -z $(which bc) && echo "$(basename $0) requires bc to be installed."
+
+function sum {
+    echo "$@" | sed -e's/ /+/' | bc
+}
+
+function get_field {
+    # get relevant bits of json file
+    jq -r ".[] | .$1" "$2" | sed -e 's/ /%/'
+}
+
+function get_location {
+    test -z $(which geoiplookup) && echo "$(basename $0) requires geiop-bin to be installed."
+    # gets locations from list of IPs
+    IPS=$(cat $1)
+    for IP in $IPS
+    do
+        HOST=$(geoiplookup $IP | sed -e 's/.*, //' | sed -e 's/ /%/g')
+        echo $HOST
+    done
+}
+
+function get_host {
+    test -z $(which host) && echo "$(basename $0) requires host to be installed."
+    # gets locations from list of IPs
+    IPS=$(cat $1)
+    for IP in $IPS
+    do
+        HOST=$(host $IP | sed -e 's/.* //' -e 's/\.$//')
+        echo $HOST
+    done
+}
+
+function multi_join {
+    # joins multiple files by row number
+    TMP=/tmp/multi_join-$RANDOM.tmp
+    TMP2=/tmp/multi_join-$RANDOM.tmp
+    (seq 1 1000) > $TMP
+    for FILE in "$@"
+    do
+        cp $TMP $TMP2
+        join $TMP2 <(nl $FILE) > $TMP
+    done
+    cat $TMP
+    rm $TMP $TMP2
+}
+
+function miner {
+    # determine miner from coinbase string
+    # works well for now, could also use blockchain.info's list in pools folder
+    # decode hex string
+    test -z $(which xxd) && echo "$(basename $0) requires xxd to be installed."
+    CB="$(echo "$@" | xxd -r -p)"
+    MINER=
+    [[ "$CB" =~ '7七彩神仙鱼' ]] && MINER="$MINER""7七彩神仙鱼/f2pool "
+    [[ "$CB" =~ 'AntPool' ]] && MINER="$MINER""AntPool "
+    [[ "$CB" =~ 'BitFury' ]] && MINER="$MINER""BitFury "
+    [[ "$CB" =~ 'BW Pool' ]] && MINER="$MINER""BW "
+    [[ "$CB" =~ 'fisher' ]] && MINER="$MINER""fisher "
+    [[ "$CB" =~ 'jinxin' ]] && MINER="$MINER""jinxin "
+    [[ "$CB" =~ 'chuan' ]] && MINER="$MINER""chuan "
+    [[ "$CB" =~ 'rasgbonyo' ]] && MINER="$MINER""rasgbonyo "
+    [[ "$CB" =~ 'ligengyin' ]] && MINER="$MINER""ligengyin "
+    [[ "$CB" =~ 'BTCC' ]] && MINER="$MINER""BTCC "
+    [[ "$CB" =~ 'BitMinter' ]] && MINER="$MINER""BitMinter "
+    [[ "$CB" =~ 'wyb5218' ]] && MINER="$MINER""wyb5218 "
+    [[ "$CB" =~ 'slush' ]] && MINER="$MINER""slush "
+    [[ "$CB" =~ 'ckpool' ]] && MINER="$MINER""ckpool "
+    [[ "$CB" =~ 'by260150' ]] && MINER="$MINER""by260150 "
+    [[ "$CB" =~ 'gaoyuebin' ]] && MINER="$MINER""gaoyuebin "
+    [[ "$CB" =~ 'f2pool' ]] && MINER="$MINER""f2pool "
+    [[ "$CB" =~ 'ninglei' ]] && MINER="$MINER""ninglei "
+    [[ "$CB" =~ 'haobtc' ]] && MINER="$MINER""haobtc "
+    [[ "$CB" =~ 'BitClub' ]] && MINER="$MINER""BitClub "
+    [[ "$CB" =~ 'lcq19890718' ]] && MINER="$MINER""lcq19890718 "
+    [[ "$CB" =~ 'anshaohua' ]] && MINER="$MINER""anshaohua "
+    [[ "$CB" =~ 'bcy' ]] && MINER="$MINER""bcy "
+    [[ "$CB" =~ 'KnCMiner' ]] && MINER="$MINER""KnCMiner "
+    [[ "$CB" =~ 'weixin' ]] && MINER="$MINER""weixin "
+    [[ "$CB" =~ 'handan' ]] && MINER="$MINER""handan "
+    [[ "$CB" =~ 'eileencwl' ]] && MINER="$MINER""eileencwl "
+    # determine support for BIPs etc
+    [[ "$CB" =~ 'BIP100' ]] && MINER="$MINER""BIP100 "
+    [[ "$CB" =~ 'BIP101' ]] && MINER="$MINER""BIP101 "
+    [[ "$CB" =~ 'BIP109' ]] && MINER="$MINER""BIP109 "
+    [[ "$CB" =~ '8M' ]] && MINER="$MINER""8MB "
+    [[ "$CB" =~ 'SEGWIT' ]] && MINER="$MINER""SEGWIT "
+    echo "$MINER"
+}
+
+### --- txid functions --- ###
+function get_tx_output_values {
+    # gets output values from txid
+    RAWTX=$(bitcoin-cli getrawtransaction $1 1)
+    echo $RAWTX | jq '.vout | .[] | .value'
+}
+
+function get_tx_input_values {
+    # gives sum of inputs from txid
+    RAWTX=$(bitcoin-cli getrawtransaction $1 1)
+    INPUTS=$(echo $RAWTX | jq -r '.vin | .[] | .txid')
+    INPUT_VAL=0.0
+    for TX in $INPUTS
+    do
+        VIN=($(get_tx_output_values $TX))
+        # sum over first outputs of input transactions
+        INPUT_VAL="$INPUT_VAL ${VIN[0]}"
+    done
+    echo $INPUT_VAL
+}
+
+function get_tx_fee {
+    # calculate fee as difference between inputs and outputs from txid
+    INPUT_VAL=$(sum $(get_tx_input_values $1))
+    OUTPUT_VAL=$(sum $(get_tx_output_values $1))
+    echo "$INPUT_VAL-$OUTPUT_VAL" | bc
+}
+    
+function coinbase_str {
+    # return coinbase or 0 otherwise from txid
+    RAWTX=$(bitcoin-cli getrawtransaction $1 1)
+    echo "$(echo $RAWTX | jq -r '.vin | .[] | .coinbase')"
+}
+
+function is_coinbase {
+    # return coinbase or 0 otherwise from txid
+    RAWTX=$(bitcoin-cli getrawtransaction $1 1)
+    echo $RAWTX | jq -r '.vin | .[] | .coinbase // false'
+}
+
+function get_tx_fee {
+    # calculate fee for transactions
+    # returns json
+    for TXID in "$@"
+    do
+        if [ $(is_coinbase $TXID) = 'false' ]
+        then
+            echo '{'
+            echo '"txid": "'$TXID'",'
+            echo '"is_coinbase": 0,'
+            echo '"fee":' $(get_tx_fee $TXID)','
+            echo '"value":' $(sum $(get_tx_output_values $TXID))
+            echo '}'
+        else
+            echo '{'
+            echo '"txid": "'$TXID'",'
+            echo '"is_coinbase": 1,'
+            echo '"coinbase": "'$(coinbase_str $TXID)"\","
+            echo '"value":' $(sum $(get_tx_output_values $TXID))
+            echo '}'
+        fi
+    done
+}

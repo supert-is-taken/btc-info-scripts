@@ -1,0 +1,3 @@
+[submodule "pools"]
+	path = pools
+	url = https://github.com/ChainQuery/Blockchain-Known-Pools.git

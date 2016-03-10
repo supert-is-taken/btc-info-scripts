@@ -5,11 +5,10 @@
 
 # script to print various info on state of fees in mempool and network
 
+# this will obviously need changing depending on block height
 BLOCKREWARD=25
 
-test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
-test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
-test -z $(which bc) && echo "$(basename $0) requires bc to be installed."
+source script_functions
 
 # test for options
 HTML=
@@ -35,12 +34,13 @@ echo "Fees in mempool: $FEETOTAL BTC, $FEES USD"
 RELAYFEE=$(printf "%.8f" $(bitcoin-cli getinfo | jq -r '.relayfee'))
 LASTHASH=$(bitcoin-cli getbestblockhash)
 TXCOUNT=$(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l)
-COINBASE=$(gettxfee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[]' | head -n1) | jq '.value' )
+COINBASE=$(get_tx_fee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[]' | head -n1) | jq '.value' )
 echo "Relay fee:" $RELAYFEE "BTC," $(printf "%.3f" $(echo $RELAYFEE*$BTCUSD | bc -l)) "USD"
 echo "Average fees in last block:" $(printf "%.8f" $(echo "($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l)) "BTC, " $(printf "%.3f" $(echo "$BTCUSD*($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l)) "USD"
+
 # fee estimates
 echo "estimated fee for inclusion in..."
-for i in $(seq 1 8)
+for i in $(seq 2 8)
 do
     ESTIMATE=$(bitcoin-cli estimatefee $i)
     FEE=$(printf "%02.2f" $(echo $ESTIMATE*$BTCUSD | bc))
