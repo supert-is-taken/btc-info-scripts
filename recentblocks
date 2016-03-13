@@ -44,20 +44,20 @@ do
     AVE_FEE=$(printf "%.8f" $(echo "($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l))
     TIME=$(bitcoin-cli getblock $LASTHASH | jq '.time')
     TIME=$(date --date="@$TIME" $DATEFMT -u)
-    echo -e "$HEIGHT%$SIZE%$TXCOUNT%$COINBASE%$AVE_FEE%$VERSION%$TIME%$COINBASE_STR" >> $TABLE
+    echo -e "$HEIGHT~$SIZE~$TXCOUNT~$COINBASE~$AVE_FEE~$VERSION~$TIME~$COINBASE_STR" >> $TABLE
     LASTHASH=$(bitcoin-cli getblock $LASTHASH | jq -r '.previousblockhash')
 done
 
 # join results and present as a table
-# % is column separator
+# ~ is column separator
 (\
     if [ -z $NOHEADER ]
     then
-        echo "height%size%#_tx%coinbase%fees/tx%version%time%date%coinbase_str";
-        echo "------%----%----%--------%-------%-------%----%----%------------";
+        echo "height~size~#_tx~coinbase~fees/tx~version~time~date~coinbase_str";
+        echo "------~----~----~--------~-------~-------~----~----~------------";
     fi; \
     cat $TABLE \
-) | column -t -s'%' > $OUTFILE
+) | column -t -s'~' > $OUTFILE
 
 
 if [ -z $HTML ]

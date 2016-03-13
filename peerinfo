@@ -52,7 +52,7 @@ get_host $ADDRESS > $HOSTNAME
     fi; \
     multi_join $CLIENT $SUBVER $SYNCED_BLOCKS $STARTINGHEIGHT $LOCATION $HOSTNAME ; \
 ) > $TABLE
-column -t $TABLE | sed -e 's/%/ /g' > $OUTFILE
+column -t $TABLE | sed -e 's/~/ /g' > $OUTFILE
 
 
 if [ -z $HTML ]

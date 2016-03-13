@@ -16,7 +16,7 @@ function sum {
 
 function get_field {
     # get relevant bits of json file
-    jq -r ".[] | .$1" "$2" | sed -e 's/ /%/'
+    jq -r ".[] | .$1" "$2" | sed -e 's/ /~/'
 }
 
 function get_location {
@@ -25,7 +25,7 @@ function get_location {
     IPS=$(cat $1)
     for IP in $IPS
     do
-        HOST=$(geoiplookup $IP | sed -e 's/.*, //' | sed -e 's/ /%/g')
+        HOST=$(geoiplookup $IP | sed -e 's/.*, //' | sed -e 's/ /~/g')
         echo $HOST
     done
 }
