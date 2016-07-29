@@ -62,7 +62,7 @@ function miner {
     test -z $(which xxd) && echo "$(basename $0) requires xxd to be installed."
     CB="$(echo "$@" | xxd -r -p)"
     MINER=
-    [[ "$CB" =~ '7七彩神仙鱼' ]] && MINER="$MINER""7七彩神仙鱼/f2pool "
+    [[ "$CB" =~ '7七彩神仙鱼' ]] && MINER="$MINER""7七彩神仙鱼/DiscusFish "
     [[ "$CB" =~ 'AntPool' ]] && MINER="$MINER""AntPool "
     [[ "$CB" =~ 'BitFury' ]] && MINER="$MINER""BitFury "
     [[ "$CB" =~ 'BW Pool' ]] && MINER="$MINER""BW "

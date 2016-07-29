@@ -5,7 +5,7 @@
 
 # show info about recent blocks
 
-BLOCKREWARD=25
+BLOCKREWARD=12.5
 DATEFMT="+%H:%M:%S%%%Y-%m-%d" 
 
 source script_functions

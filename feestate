@@ -6,7 +6,7 @@
 # script to print various info on state of fees in mempool and network
 
 # this will obviously need changing depending on block height
-BLOCKREWARD=25
+BLOCKREWARD=12.5
 
 source script_functions
 
