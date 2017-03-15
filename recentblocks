@@ -40,7 +40,7 @@ do
     SIZE="$(( $(bitcoin-cli getblock $LASTHASH | jq '.size')/1024 ))kb"
     TXCOUNT=$(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l)
     COINBASE=$(get_tx_fee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[0]') | grep -v 'coinbase' | jq '.value' )
-    COINBASE_STR=$(miner "$(get_tx_fee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[0]') | jq -r '.coinbase')")
+    COINBASE_STR=$(decode_coinbase_str "$(get_tx_fee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[0]') | jq -r '.coinbase')")
     AVE_FEE=$(printf "%.8f" $(echo "($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l))
     TIME=$(bitcoin-cli getblock $LASTHASH | jq '.time')
     TIME=$(date --date="@$TIME" $DATEFMT -u)

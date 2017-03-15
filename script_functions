@@ -55,20 +55,26 @@ function multi_join {
     rm $TMP $TMP2
 }
 
-function miner {
+function decode_coinbase_str {
     # determine miner from coinbase string
     # works well for now, could also use blockchain.info's list in pools folder
     # decode hex string
     test -z $(which xxd) && echo "$(basename $0) requires xxd to be installed."
-    CB="$(echo "$@" | xxd -r -p)"
+    CB="$(echo "$@" | xxd -r -p | tr -d '\0')"
     MINER=
-    [[ "$CB" =~ '7七彩神仙鱼' ]] && MINER="$MINER""7七彩神仙鱼/DiscusFish "
+    [[ "$CB" =~ '7七彩神仙鱼' ]] && MINER="$MINER""7七彩神仙鱼/DiscusFish/F2Pool "
     [[ "$CB" =~ 'AntPool' ]] && MINER="$MINER""AntPool "
+    [[ "$CB" =~ 'Eligius' ]] && MINER="$MINER""Eligius "
+    [[ "$CB" =~ 'pool.bitcoin.com' ]] && MINER="$MINER""bitcoin.com "
+    [[ "$CB" =~ 'π' ]] && MINER="$MINER""π"
+    [[ "$CB" =~ 'zhangwei888' ]] && MINER="$MINER""zhangwei888 "
     [[ "$CB" =~ 'Telco 214' ]] && MINER="$MINER""Telco "
     [[ "$CB" =~ 'ViaBTC' ]] && MINER="$MINER""ViaBTC "
     [[ "$CB" =~ 'BitFury' ]] && MINER="$MINER""BitFury "
+    [[ "$CB" =~ 'Bitfury' ]] && MINER="$MINER""Bitfury "
     [[ "$CB" =~ 'HaoBTC' ]] && MINER="$MINER""HaoBTC "
     [[ "$CB" =~ 'BTC.COM' ]] && MINER="$MINER""BTC.COM "
+    [[ "$CB" =~ 'BTC.TOP' ]] && MINER="$MINER""BTC.TOP "
     [[ "$CB" =~ 'BW Pool' ]] && MINER="$MINER""BW "
     [[ "$CB" =~ 'fisher' ]] && MINER="$MINER""fisher "
     [[ "$CB" =~ 'jinxin' ]] && MINER="$MINER""jinxin "
@@ -76,6 +82,9 @@ function miner {
     [[ "$CB" =~ 'rasgbonyo' ]] && MINER="$MINER""rasgbonyo "
     [[ "$CB" =~ 'ligengyin' ]] && MINER="$MINER""ligengyin "
     [[ "$CB" =~ 'BTCC' ]] && MINER="$MINER""BTCC "
+    [[ "$CB" =~ 'CANOE' ]] && MINER="$MINER""Canoe "
+    [[ "$CB" =~ 'BATPOOL' ]] && MINER="$MINER""BATPOOL "
+    [[ "$CB" =~ '******' ]] && MINER="$MINER""Telco 214 "
     [[ "$CB" =~ 'BitMinter' ]] && MINER="$MINER""BitMinter "
     [[ "$CB" =~ 'wyb5218' ]] && MINER="$MINER""wyb5218 "
     [[ "$CB" =~ 'slush' ]] && MINER="$MINER""slush "
@@ -85,7 +94,8 @@ function miner {
     [[ "$CB" =~ 'gaoyuebin' ]] && MINER="$MINER""gaoyuebin "
     [[ "$CB" =~ 'f2pool' ]] && MINER="$MINER""f2pool "
     [[ "$CB" =~ 'ninglei' ]] && MINER="$MINER""ninglei "
-    [[ "$CB" =~ 'haobtc' ]] && MINER="$MINER""haobtc "
+    [[ "$CB" =~ 'haobtc' ]] && MINER="$MINER""HaoBTC "
+    [[ "$CB" =~ 'HaoBTC' ]] && MINER="$MINER""HaoBTC "
     [[ "$CB" =~ 'BitClub' ]] && MINER="$MINER""BitClub "
     [[ "$CB" =~ 'lcq19890718' ]] && MINER="$MINER""lcq19890718 "
     [[ "$CB" =~ 'anshaohua' ]] && MINER="$MINER""anshaohua "
@@ -95,11 +105,14 @@ function miner {
     [[ "$CB" =~ 'handan' ]] && MINER="$MINER""handan "
     [[ "$CB" =~ 'eileencwl' ]] && MINER="$MINER""eileencwl "
     # determine support for BIPs etc
+    [[ "$CB" =~ 'Big Blocks' ]] && MINER="$MINER""Big Blocks "
     [[ "$CB" =~ 'BIP100' ]] && MINER="$MINER""BIP100 "
     [[ "$CB" =~ 'BIP101' ]] && MINER="$MINER""BIP101 "
     [[ "$CB" =~ 'BIP109' ]] && MINER="$MINER""BIP109 "
     [[ "$CB" =~ '8M' ]] && MINER="$MINER""8MB "
     [[ "$CB" =~ 'SEGWIT' ]] && MINER="$MINER""SEGWIT "
+    [[ "$CB" =~ 'EB' ]] && MINER="$MINER"$(sed 's/.*\(EB[0-9]*\).*/\1 /')
+    [[ "$CB" =~ 'AD' ]] && MINER="$MINER"$(sed 's/.*\(AD[0-9]*\).*/\1 /')
     echo "$MINER"
 }
 
