@@ -6,16 +6,18 @@
 # monitor incoming blocks
 
 BLOCKREWARD=12.5
-POLLDELAY=1
+POLLDELAY=10
+NOHEADER=
 DATEFMT="+%H:%M:%S~%Y-%m-%d" 
 
 source script_functions
 
 # test for options
-while getopts hwrn: opt
+while getopts hrd: opt
 do
     case "$opt" in
     (h) echo "usage: $0 ";;
+    (d) POLLDELAY=$OPTARG;;
     (r) NOHEADER=1;;
     esac
 done

@@ -13,7 +13,7 @@ source script_functions
 # test for options
 NUMBLOCKS=10
 NOHEADER=
-while getopts hwrn: opt
+while getopts hrn: opt
 do
     case "$opt" in
     (h) echo "usage: $0  [-n NUMBLOCKS]";;
