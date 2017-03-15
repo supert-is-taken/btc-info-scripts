@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+# (c) /u/supert 2016
+# released under MIT licence
+
+# monitor incoming blocks
+
+BLOCKREWARD=12.5
+POLLDELAY=1
+DATEFMT="+%H:%M:%S~%Y-%m-%d" 
+
+source script_functions
+
+# test for options
+while getopts hwrn: opt
+do
+    case "$opt" in
+    (h) echo "usage: $0 ";;
+    (r) NOHEADER=1;;
+    esac
+done
+
+shift $((OPTIND - 1))
+
+NEWBLOCK=/tmp/lastblock-$RANDOM.tmp
+
+(\
+    if [ -z $NOHEADER ]
+    then
+        echo "height~size  ~#_tx ~coinbase~   fees/tx   ~version   ~time    ~date      ~coinbase signal";
+        echo "------~----  ~---- ~--------~   -------   ~-------   ~----    ~----      ~---------------";
+    fi; \
+) | column -t -s'~'
+
+LASTHASH=
+NEWHASH=$(bitcoin-cli getbestblockhash)
+
+# starting from last block, work back
+while :
+do
+    if [ "$NEWHASH" != "$LASTHASH" ]
+    then
+        # new block
+        bitcoin-cli getblock $NEWHASH > $NEWBLOCK
+        HEIGHT=$(cat $NEWBLOCK | jq '.height')
+        VERSION=0x$(printf "%08x" $(cat $NEWBLOCK | jq '.version'))
+        SIZE="$(printf "%04i" $(( $(cat $NEWBLOCK | jq '.size')/1024 )) )Kb"
+        TXCOUNT=$(printf "%05i" $(cat $NEWBLOCK | jq '.tx' | wc -l) )
+        COINBASE=$(printf "%0.8f" $(get_tx_fee $(cat $NEWBLOCK | jq -r '.tx | .[0]') | grep -v 'coinbase' | jq '.value' ) )
+        COINBASE_STR=$(decode_coinbase_str "$(get_tx_fee $(cat $NEWBLOCK | jq -r '.tx | .[0]') | jq -r '.coinbase')")
+        AVE_FEE=$(printf "%.8f" $(echo "($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l))
+        TIME=$(cat $NEWBLOCK | jq '.time')
+        TIME=$(date --date="@$TIME" $DATEFMT -u)
+        echo -e "$HEIGHT~$SIZE~$TXCOUNT~$COINBASE~$AVE_FEE~$VERSION~$TIME~$COINBASE_STR" | column -t -s'~' | cut -c 1-$(tput cols)
+        LASTHASH=$NEWHASH
+    else
+        # same block
+        sleep $POLLDELAY
+    fi
+    NEWHASH=$(bitcoin-cli getbestblockhash)
+done

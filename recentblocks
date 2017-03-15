@@ -11,14 +11,12 @@ DATEFMT="+%H:%M:%S~%Y-%m-%d"
 source script_functions
 
 # test for options
-HTML=
 NUMBLOCKS=10
 NOHEADER=
 while getopts hwrn: opt
 do
     case "$opt" in
-    (h) echo "usage: $0 [-w] [-n NUMBLOCKS]";;
-    (w) HTML=1;;
+    (h) echo "usage: $0  [-n NUMBLOCKS]";;
     # n argument is number of blocks to show, default 10
     (n) NUMBLOCKS=$OPTARG;;
     (r) NOHEADER=1;;
@@ -27,45 +25,31 @@ done
 
 shift $((OPTIND - 1))
 
-TABLE=/tmp/recentblocks-table-$RANDOM.tmp
-OUTFILE=/tmp/recentblocks-out-$RANDOM.tmp
+LASTBLOCK=/tmp/lastblock-$RANDOM.tmp
+
+(\
+    if [ -z $NOHEADER ]
+    then
+        echo "height~size  ~#_tx ~coinbase~   fees/tx   ~version   ~time    ~date      ~coinbase signal";
+        echo "------~----  ~---- ~--------~   -------   ~-------   ~----    ~----      ~---------------";
+    fi; \
+) | column -t -s'~'
 
 LASTHASH=$(bitcoin-cli getbestblockhash)
 
 # starting from last block, work back
 for i in $(seq $NUMBLOCKS)
 do
-    HEIGHT=$(bitcoin-cli getblock $LASTHASH | jq '.height')
-    VERSION=0x$(printf "%08x" $(bitcoin-cli getblock $LASTHASH | jq '.version'))
-    SIZE="$(( $(bitcoin-cli getblock $LASTHASH | jq '.size')/1024 ))kb"
-    TXCOUNT=$(bitcoin-cli getblock $LASTHASH | jq '.tx' | wc -l)
-    COINBASE=$(get_tx_fee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[0]') | grep -v 'coinbase' | jq '.value' )
-    COINBASE_STR=$(decode_coinbase_str "$(get_tx_fee $(bitcoin-cli getblock $LASTHASH | jq -r '.tx | .[0]') | jq -r '.coinbase')")
+    bitcoin-cli getblock $LASTHASH > $LASTBLOCK
+    HEIGHT=$(cat $LASTBLOCK | jq '.height')
+    VERSION=0x$(printf "%08x" $(cat $LASTBLOCK | jq '.version'))
+    SIZE="$(printf "%04i" $(( $(cat $LASTBLOCK | jq '.size')/1024 )) )Kb"
+    TXCOUNT=$(printf "%05i" $(cat $LASTBLOCK | jq '.tx' | wc -l) )
+    COINBASE=$(printf "%0.8f" $(get_tx_fee $(cat $LASTBLOCK | jq -r '.tx | .[0]') | grep -v 'coinbase' | jq '.value' ) )
+    COINBASE_STR=$(decode_coinbase_str "$(get_tx_fee $(cat $LASTBLOCK | jq -r '.tx | .[0]') | jq -r '.coinbase')")
     AVE_FEE=$(printf "%.8f" $(echo "($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l))
-    TIME=$(bitcoin-cli getblock $LASTHASH | jq '.time')
+    TIME=$(cat $LASTBLOCK | jq '.time')
     TIME=$(date --date="@$TIME" $DATEFMT -u)
-    echo -e "$HEIGHT~$SIZE~$TXCOUNT~$COINBASE~$AVE_FEE~$VERSION~$TIME~$COINBASE_STR" >> $TABLE
-    LASTHASH=$(bitcoin-cli getblock $LASTHASH | jq -r '.previousblockhash')
+    echo -e "$HEIGHT~$SIZE~$TXCOUNT~$COINBASE~$AVE_FEE~$VERSION~$TIME~$COINBASE_STR" | column -t -s'~' | cut -c 1-$(tput cols)
+    LASTHASH=$(cat $LASTBLOCK | jq -r '.previousblockhash')
 done
-
-# join results and present as a table
-# ~ is column separator
-(\
-    if [ -z $NOHEADER ]
-    then
-        echo "height~size~#_tx~coinbase~fees/tx~version~time~date~coinbase_str";
-        echo "------~----~----~--------~-------~-------~----~----~------------";
-    fi; \
-    cat $TABLE \
-) | column -t -s'~' > $OUTFILE
-
-
-if [ -z $HTML ]
-then
-    cat $OUTFILE | cut -c 1-$(tput cols)
-else
-    cat $OUTFILE | awk 'BEGIN{print "<table>"} {print "<tr>";for(i=1;i<=NF;i++)print "<td>" $i"</td>";print "</tr>"} END{print "</table>"}'
-fi
-
-rm $TABLE
-rm $OUTFILE
