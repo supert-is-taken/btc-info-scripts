@@ -55,65 +55,73 @@ function multi_join {
     rm $TMP $TMP2
 }
 
-function decode_coinbase_str {
+function get_coinbase_signal {
+    # determine EB/AD from coinbase string
+    # decode hex string
+    test -z $(which xxd) && echo "$(basename $0) requires xxd to be installed."
+    test -z $(which perl) && echo "$(basename $0) requires perl to be installed."
+    CB=$(echo "$1" | xxd -r -p | tr -d '\0')
+    EBAD=
+    # determine support for BIPs etc
+    [[ "$CB" =~ 'EB' ]]                 && EBAD="$EBAD""$(echo $CB | perl -ne 'print $1 if /.*(EB[0-9]+).*/') "
+    [[ "$CB" =~ 'AD' ]]                 && EBAD="$EBAD""$(echo $CB | perl -ne 'print $1 if /.*(AD[0-9]+).*/') "
+    [[ "$CB" =~ '8M' ]]                 && EBAD="$EBAD""8MB "
+    [[ "$CB" =~ 'Big Blocks' ]]         && EBAD="$EBAD""Big Blocks "
+    [[ "$CB" =~ 'BIP100' ]]             && EBAD="$EBAD""BIP100 "
+    [[ "$CB" =~ 'BIP101' ]]             && EBAD="$EBAD""BIP101 "
+    [[ "$CB" =~ 'BIP109' ]]             && EBAD="$EBAD""BIP109 "
+    [[ "$CB" =~ 'SEGWIT' ]]             && EBAD="$EBAD""SEGWIT "
+    printf '%-20s' "$EBAD"
+}
+
+function get_coinbase_miner {
     # determine miner from coinbase string
     # works well for now, could also use blockchain.info's list in pools folder
     # decode hex string
     test -z $(which xxd) && echo "$(basename $0) requires xxd to be installed."
-    CB="$(echo "$@" | xxd -r -p | tr -d '\0')"
+    CB=$(echo "$1" | xxd -r -p | tr -d '\0')
     MINER=
-    [[ "$CB" =~ '7七彩神仙鱼' ]] && MINER="$MINER""7七彩神仙鱼/DiscusFish/F2Pool "
-    [[ "$CB" =~ 'AntPool' ]] && MINER="$MINER""AntPool "
-    [[ "$CB" =~ 'Eligius' ]] && MINER="$MINER""Eligius "
-    [[ "$CB" =~ 'pool.bitcoin.com' ]] && MINER="$MINER""bitcoin.com "
-    [[ "$CB" =~ 'π' ]] && MINER="$MINER""π"
-    [[ "$CB" =~ 'zhangwei888' ]] && MINER="$MINER""zhangwei888 "
-    [[ "$CB" =~ 'Telco 214' ]] && MINER="$MINER""Telco "
-    [[ "$CB" =~ 'ViaBTC' ]] && MINER="$MINER""ViaBTC "
-    [[ "$CB" =~ 'BitFury' ]] && MINER="$MINER""BitFury "
-    [[ "$CB" =~ 'Bitfury' ]] && MINER="$MINER""Bitfury "
-    [[ "$CB" =~ 'HaoBTC' ]] && MINER="$MINER""HaoBTC "
-    [[ "$CB" =~ 'BTC.COM' ]] && MINER="$MINER""BTC.COM "
-    [[ "$CB" =~ 'BTC.TOP' ]] && MINER="$MINER""BTC.TOP "
-    [[ "$CB" =~ 'BW Pool' ]] && MINER="$MINER""BW "
-    [[ "$CB" =~ 'fisher' ]] && MINER="$MINER""fisher "
-    [[ "$CB" =~ 'jinxin' ]] && MINER="$MINER""jinxin "
-    [[ "$CB" =~ 'chuan' ]] && MINER="$MINER""chuan "
-    [[ "$CB" =~ 'rasgbonyo' ]] && MINER="$MINER""rasgbonyo "
-    [[ "$CB" =~ 'ligengyin' ]] && MINER="$MINER""ligengyin "
-    [[ "$CB" =~ 'BTCC' ]] && MINER="$MINER""BTCC "
-    [[ "$CB" =~ 'CANOE' ]] && MINER="$MINER""Canoe "
-    [[ "$CB" =~ 'BATPOOL' ]] && MINER="$MINER""BATPOOL "
-    [[ "$CB" =~ '******' ]] && MINER="$MINER""Telco 214 "
-    [[ "$CB" =~ 'BitMinter' ]] && MINER="$MINER""BitMinter "
-    [[ "$CB" =~ 'wyb5218' ]] && MINER="$MINER""wyb5218 "
-    [[ "$CB" =~ 'slush' ]] && MINER="$MINER""slush "
-    [[ "$CB" =~ 'ckpool' ]] && MINER="$MINER""ckpool "
-    [[ "$CB" =~ 'gbminers' ]] && MINER="$MINER""gbminers "
-    [[ "$CB" =~ 'by260150' ]] && MINER="$MINER""by260150 "
-    [[ "$CB" =~ 'gaoyuebin' ]] && MINER="$MINER""gaoyuebin "
-    [[ "$CB" =~ 'f2pool' ]] && MINER="$MINER""f2pool "
-    [[ "$CB" =~ 'ninglei' ]] && MINER="$MINER""ninglei "
-    [[ "$CB" =~ 'haobtc' ]] && MINER="$MINER""HaoBTC "
-    [[ "$CB" =~ 'HaoBTC' ]] && MINER="$MINER""HaoBTC "
-    [[ "$CB" =~ 'BitClub' ]] && MINER="$MINER""BitClub "
-    [[ "$CB" =~ 'lcq19890718' ]] && MINER="$MINER""lcq19890718 "
-    [[ "$CB" =~ 'anshaohua' ]] && MINER="$MINER""anshaohua "
-    [[ "$CB" =~ 'bcy' ]] && MINER="$MINER""bcy "
-    [[ "$CB" =~ 'KnCMiner' ]] && MINER="$MINER""KnCMiner "
-    [[ "$CB" =~ 'weixin' ]] && MINER="$MINER""weixin "
-    [[ "$CB" =~ 'handan' ]] && MINER="$MINER""handan "
-    [[ "$CB" =~ 'eileencwl' ]] && MINER="$MINER""eileencwl "
-    # determine support for BIPs etc
-    [[ "$CB" =~ 'Big Blocks' ]] && MINER="$MINER""Big Blocks "
-    [[ "$CB" =~ 'BIP100' ]] && MINER="$MINER""BIP100 "
-    [[ "$CB" =~ 'BIP101' ]] && MINER="$MINER""BIP101 "
-    [[ "$CB" =~ 'BIP109' ]] && MINER="$MINER""BIP109 "
-    [[ "$CB" =~ '8M' ]] && MINER="$MINER""8MB "
-    [[ "$CB" =~ 'SEGWIT' ]] && MINER="$MINER""SEGWIT "
-    [[ "$CB" =~ 'EB' ]] && MINER="$MINER"$(sed 's/.*\(EB[0-9]*\).*/\1 /')
-    [[ "$CB" =~ 'AD' ]] && MINER="$MINER"$(sed 's/.*\(AD[0-9]*\).*/\1 /')
-    echo "$MINER"
+    [[ "$CB" =~ '7七彩神仙鱼' ]]        && MINER="$MINER""7七彩神仙鱼 "
+    [[ "$CB" =~ 'AntPool' ]]            && MINER="$MINER""AntPool "
+    [[ "$CB" =~ 'Eligius' ]]            && MINER="$MINER""Eligius "
+    [[ "$CB" =~ 'pool.bitcoin.com' ]]   && MINER="$MINER""bitcoin.com "
+    [[ "$CB" =~ 'π' ]]                  && MINER="$MINER""π "
+    [[ "$CB" =~ 'zhangwei888' ]]        && MINER="$MINER""zhangwei888 "
+    [[ "$CB" =~ 'Telco 214' ]]          && MINER="$MINER""Telco "
+    [[ "$CB" =~ 'ViaBTC' ]]             && MINER="$MINER""ViaBTC "
+    [[ "$CB" =~ 'BitFury' ]]            && MINER="$MINER""BitFury "
+    [[ "$CB" =~ 'Bitfury' ]]            && MINER="$MINER""Bitfury "
+    [[ "$CB" =~ 'BTC.COM' ]]            && MINER="$MINER""BTC.COM "
+    [[ "$CB" =~ 'BTC.TOP' ]]            && MINER="$MINER""BTC.TOP "
+    [[ "$CB" =~ 'BW Pool' ]]            && MINER="$MINER""BW "
+    [[ "$CB" =~ 'fisher' ]]             && MINER="$MINER""fisher "
+    [[ "$CB" =~ 'jinxin' ]]             && MINER="$MINER""jinxin "
+    [[ "$CB" =~ 'chuan' ]]              && MINER="$MINER""chuan "
+    [[ "$CB" =~ 'rasgbonyo' ]]          && MINER="$MINER""rasgbonyo "
+    [[ "$CB" =~ 'ligengyin' ]]          && MINER="$MINER""ligengyin "
+    [[ "$CB" =~ 'BTCC' ]]               && MINER="$MINER""BTCC "
+    [[ "$CB" =~ 'CANOE' ]]              && MINER="$MINER""Canoe "
+    [[ "$CB" =~ 'BATPOOL' ]]            && MINER="$MINER""BATPOOL "
+    [[ "$CB" =~ '******' ]]             && MINER="$MINER""Telco 214 "
+    [[ "$CB" =~ 'BitMinter' ]]          && MINER="$MINER""BitMinter "
+    [[ "$CB" =~ 'wyb5218' ]]            && MINER="$MINER""wyb5218 "
+    [[ "$CB" =~ 'slush' ]]              && MINER="$MINER""Slush "
+    [[ "$CB" =~ 'ckpool' ]]             && MINER="$MINER""ckpool "
+    [[ "$CB" =~ 'gbminers' ]]           && MINER="$MINER""GBMiners "
+    [[ "$CB" =~ 'by260150' ]]           && MINER="$MINER""by260150 "
+    [[ "$CB" =~ 'gaoyuebin' ]]          && MINER="$MINER""gaoyuebin "
+    [[ "$CB" =~ 'f2pool' ]]             && MINER="$MINER""f2pool "
+    [[ "$CB" =~ 'ninglei' ]]            && MINER="$MINER""ninglei "
+    [[ "$CB" =~ 'HaoBTC' ]]             && MINER="$MINER""HaoBTC "
+    [[ "$CB" =~ 'BitClub' ]]            && MINER="$MINER""BitClub "
+    [[ "$CB" =~ 'lcq19890718' ]]        && MINER="$MINER""lcq19890718 "
+    [[ "$CB" =~ 'anshaohua' ]]          && MINER="$MINER""anshaohua "
+    [[ "$CB" =~ 'bcy' ]]                && MINER="$MINER""bcy "
+    [[ "$CB" =~ 'KnCMiner' ]]           && MINER="$MINER""KnCMiner "
+    [[ "$CB" =~ 'weixin' ]]             && MINER="$MINER""weixin "
+    [[ "$CB" =~ 'handan' ]]             && MINER="$MINER""handan "
+    [[ "$CB" =~ 'eileencwl' ]]          && MINER="$MINER""eileencwl "
+    printf '%-20s' "$MINER"
 }
 
 ### --- txid functions --- ###
@@ -179,3 +187,38 @@ function get_tx_fee {
         fi
     done
 }
+
+function print_block {
+    # print block in tabular manner
+    BLOCKREWARD=12.5
+    HASH="$1"
+    BLOCK=/tmp/lastblock-$RANDOM.tmp
+    TX=/tmp/tx-$RANDOM.tmp
+    bitcoin-cli getblock $HASH > $BLOCK
+    HEIGHT=$(cat $BLOCK | jq '.height')
+    VERSION=0x$(printf "%08x" $(cat $BLOCK | jq '.version'))
+    SIZE="$(printf "%04i" $(( $(cat $BLOCK | jq '.size')/1024 )) )Kb"
+    TXCOUNT=$(printf "%05i" $(cat $BLOCK | jq '.tx' | wc -l) )
+    get_tx_fee $(cat $BLOCK | jq -r '.tx | .[0]') > $TX
+    COINBASE=$(printf "%0.8f" $(cat $TX | grep -v 'coinbase' | jq '.value' ) )
+    MINER=$(get_coinbase_miner "$(cat $TX | jq -r '.coinbase')")
+    SIGNAL=$(get_coinbase_signal "$(cat $TX | jq -r '.coinbase')")
+    COINBASE_STR=$(cat $TX | jq -r '.coinbase' | xxd -r -p | tr -d '\0')
+    AVE_FEE=$(printf "%.8f" $(echo "($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l))
+    TIME=$(cat $BLOCK | jq '.time')
+    TIME=$(date --date="@$TIME" $DATEFMT -u)
+    echo -e "$HEIGHT~$SIZE~$TXCOUNT~$COINBASE~$AVE_FEE~$VERSION~$TIME~$SIGNAL ~$MINER" | column -t -s'~' | cut -c 1-$(tput cols)
+    rm $TX $BLOCK
+}
+
+function print_table_header {
+    NOHEADER="$@"
+    (\
+        if [ -z $NOHEADER ]
+        then
+            echo "height~size  ~#_tx ~coinbase~   fees/tx   ~version   ~time    ~date      ~signal              ~miner";
+            echo "------~----  ~---- ~--------~   -------   ~-------   ~----    ~----      ~------              ~-----";
+        fi; \
+    ) | column -t -s'~'
+}
+
