@@ -71,7 +71,7 @@ function get_coinbase_signal {
     [[ "$CB" =~ 'BIP101' ]]             && EBAD="$EBAD""BIP101 "
     [[ "$CB" =~ 'BIP109' ]]             && EBAD="$EBAD""BIP109 "
     [[ "$CB" =~ 'SEGWIT' ]]             && EBAD="$EBAD""SEGWIT "
-    printf '%-20s' "$EBAD"
+    printf '%-17s' "$EBAD"
 }
 
 function get_coinbase_miner {
@@ -145,12 +145,12 @@ function get_tx_input_values {
     echo $INPUT_VAL
 }
 
-function get_tx_fee {
-    # calculate fee as difference between inputs and outputs from txid
-    INPUT_VAL=$(sum $(get_tx_input_values $1))
-    OUTPUT_VAL=$(sum $(get_tx_output_values $1))
-    echo "$INPUT_VAL-$OUTPUT_VAL" | bc
-}
+#function get_tx_fee {
+    ## calculate fee as difference between inputs and outputs from txid
+    #INPUT_VAL=$(sum $(get_tx_input_values $1))
+    #OUTPUT_VAL=$(sum $(get_tx_output_values $1))
+    #echo "$INPUT_VAL-$OUTPUT_VAL" | bc
+#}
     
 function coinbase_str {
     # return coinbase or 0 otherwise from txid
@@ -175,14 +175,14 @@ function get_tx_fee {
             echo '"txid": "'$TXID'",'
             echo '"is_coinbase": 0,'
             echo '"fee":' $(get_tx_fee $TXID)','
-            echo '"value":' $(sum $(get_tx_output_values $TXID))
+            echo '"value":' $(get_tx_output_values $TXID | paste -sd+ | bc)
             echo '}'
         else
             echo '{'
             echo '"txid": "'$TXID'",'
             echo '"is_coinbase": 1,'
             echo '"coinbase": "'$(coinbase_str $TXID)"\","
-            echo '"value":' $(sum $(get_tx_output_values $TXID))
+            echo '"value":' $(get_tx_output_values $TXID | paste -sd+ | bc)
             echo '}'
         fi
     done
@@ -197,12 +197,12 @@ function print_block {
     bitcoin-cli getblock $HASH > $BLOCK
     HEIGHT=$(cat $BLOCK | jq '.height')
     VERSION=0x$(printf "%08x" $(cat $BLOCK | jq '.version'))
-    SIZE="$(printf "%04i" $(( $(cat $BLOCK | jq '.size')/1024 )) )Kb"
+    SIZE=$(printf "%04i" $(( $(cat $BLOCK | jq '.size')/1024 )) )'Kb'
     TXCOUNT=$(printf "%05i" $(cat $BLOCK | jq '.tx' | wc -l) )
     get_tx_fee $(cat $BLOCK | jq -r '.tx | .[0]') > $TX
     COINBASE=$(printf "%0.8f" $(cat $TX | grep -v 'coinbase' | jq '.value' ) )
-    MINER=$(get_coinbase_miner "$(cat $TX | jq -r '.coinbase')")
-    SIGNAL=$(get_coinbase_signal "$(cat $TX | jq -r '.coinbase')")
+    MINER=$(get_coinbase_miner $(cat $TX | jq -r '.coinbase') )
+    SIGNAL=$(get_coinbase_signal $(cat $TX | jq -r '.coinbase') )
     COINBASE_STR=$(cat $TX | jq -r '.coinbase' | xxd -r -p | tr -d '\0')
     AVE_FEE=$(printf "%.8f" $(echo "($COINBASE - $BLOCKREWARD) / $TXCOUNT " | bc -l))
     TIME=$(cat $BLOCK | jq '.time')
@@ -216,8 +216,8 @@ function print_table_header {
     (\
         if [ -z $NOHEADER ]
         then
-            echo "height~size  ~#_tx ~coinbase~   fees/tx   ~version   ~time    ~date      ~signal              ~miner";
-            echo "------~----  ~---- ~--------~   -------   ~-------   ~----    ~----      ~------              ~-----";
+            echo "height~size  ~#_tx ~coinbase~   fees/tx   ~version   ~time    ~date      ~signal            ~miner";
+            echo "------~----  ~---- ~--------~   -------   ~-------   ~----    ~----      ~------            ~-----";
         fi; \
     ) | column -t -s'~'
 }
