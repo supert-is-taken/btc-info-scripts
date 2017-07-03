@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# (c) /u/supert 2016
+# (c) /u/_supert_ 2016
 # released under MIT licence
 
 # common functions for btc info scripts
@@ -9,6 +9,10 @@
 test -z $(which bitcoin-cli) && echo "$(basename $0) requires bitcoin-cli to be installed."
 test -z $(which jq) && echo "$(basename $0) requires jq to be installed."
 test -z $(which bc) && echo "$(basename $0) requires bc to be installed."
+
+function bitstamp_price {
+    curl -s https://www.bitstamp.net/api/ticker/ | jq --raw-output '.last'
+}
 
 function sum {
     echo "$@" | sed -e's/ /+/' | bc
@@ -71,6 +75,7 @@ function get_coinbase_signal {
     [[ "$CB" =~ 'BIP101' ]]             && EBAD="$EBAD""BIP101 "
     [[ "$CB" =~ 'BIP109' ]]             && EBAD="$EBAD""BIP109 "
     [[ "$CB" =~ 'SEGWIT' ]]             && EBAD="$EBAD""SEGWIT "
+    [[ "$CB" =~ 'NYA' ]]                && EBAD="$EBAD""NYA "
     printf '%-17s' "$EBAD"
 }
 

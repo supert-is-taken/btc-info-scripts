@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# (c) /u/supert 2016
+# (c) /u/_supert_ 2016
 # released under MIT licence
 
 # script to print various info on state of fees in mempool and network
@@ -23,7 +23,7 @@ do
 done
 
 # market price
-BTCUSD=$(curl -s "https://api.bitcoinaverage.com/ticker/USD/last")
+BTCUSD=$(bitstamp_price)
 echo "1 BTC = $BTCUSD USD"
 
 # fees in mempool
